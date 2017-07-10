@@ -1,0 +1,118 @@
+---
+title: "Assignment 2 R data exploration"
+output:
+  html_notebook: default
+  html_document: default
+---
+
+```{r, include=FALSE}
+Sys.setenv("plotly_username"="linus.austen.mcmanamey")
+Sys.setenv("plotly_api_key"="3tqgEzyZAGTIeFY5sQ1T")
+library(rgl)
+```
+# physics of cricket
+### cricket ball coefficient of restitution
+- C_O_R <- 0.42
+### effect on velocity of ball
+- PRE_BOUNCE_DRAG <- 0.88
+### speed of ball after bounce from release
+- REBOUND_SPEED_COEFF <- 0.45
+### drag for after bounce 
+- AFTER_BOUNCE_DRAG <- 0.93
+```{r}
+C_O_R <- 0.42
+PRE_BOUNCE_DRAG <- 0.88
+REBOUND_SPEED_COEFF <- 0.45
+AFTER_BOUNCE_DRAG <- 0.93
+```
+
+```{r}
+df <- read.csv("pitch_data.csv")
+df$TimeBowled.1  <- NULL
+```
+
+# Bounce speed measurements with drag coeff comparison
+- set up bSpeed_control as the control variable
+- compare bounce speed against the control speed
+- create percentage of difference for later calculations
+
+```{r}
+df$bSpeed_control <- df$releaseSpeed * PRE_BOUNCE_DRAG
+df$bSpeedDiff <- df$bSpeed_control - df$bounceSpeed
+df$bSpeedPercent <- (df$bSpeedDiff / df$bSpeed_control)*100
+```
+
+## Bounce height measurements using C_O_R for comparsion
+- set up comparsion with stump height
+
+```{r}
+df$bStumps_control <- df$releaseZ * C_O_R
+df$bstumpsDiff <- df$bStumps_control - df$stumpPosZ
+df$bBouncePercent <- (df$bstumpsDiff / df$bStumps_control)*100
+```
+
+## Stump speed measurements
+- create control speed based on coefficents
+```{r}
+df$sSpeed_control <- df$releaseSpeed * PRE_BOUNCE_DRAG * AFTER_BOUNCE_DRAG
+```
+
+
+```{r}
+callGRaph <-function(cleaned, ball_Size, title_String, graph_Name)
+{
+  p <- plot_ly()
+  p <- add_trace(p, x =cleaned$releaseX, y = cleaned$releaseY, z = cleaned$releaseZ, colors = "blue", mode = "markers",  name = 'Release',type = "scatter3d", mode = "markers", marker = list(opacity = 1, size = ball_Size, line=list(color='red', width=1)))
+  p <- add_trace(p, x =cleaned$bounceX, y = cleaned$bounceY, z = cleaned$bounceZ, colors = "blue", mode = "markers", name = 'Bounce', type = "scatter3d", mode = "markers", marker = list(opacity = 1, size = ball_Size, line=list(color='green', width=1)))
+  p <- add_trace(p, x =cleaned$stumpPosX, y = cleaned$stumpPosY, z = cleaned$stumpPosZ, colors = "blue", mode = "markers",  name = 'Stumps', type = "scatter3d", mode = "markers", marker = list(opacity = 1, size = ball_Size, line=list(color='yellow', width=1)))%>% layout(title = title_String, scene = list(aspectmode = 'data'))
+chart_link = plotly_POST(p, filename=paste("scatter3d/", graph_Name))
+p
+return(chart_link)
+}
+```
+# Test - Lowest bounce 25% of bowling from northern end
+```{r}
+ball_Size <- 4
+graph_Name <- "BounceNend25"
+BowlEnd <- "north"
+title_String <- paste("Lowest bounce - 25% balls bowled from the ", BowlEnd, " end")
+quantileValue <- .75
+quantile <- quantile(df$bBouncePercent, quantileValue)
+cleaned <- df[df$bBouncePercent >= quantile,]
+cleaned <- cleaned[cleaned$bowlerEnd == BowlEnd,]
+callGRaph(cleaned, ball_Size, title_String, graph_Name)
+```
+https://plot.ly/~linus.austen.mcmanamey/436/lowest-bounce-25-balls-bowled-from-the-north-end/
+
+
+# Test -  Slowest bowling speed 25% of bowling from northern end
+```{r}
+ball_Size <- 4
+graph_Name <- "SlowNend25"
+title_String <- paste("Slowest speed - 25% balls bowled from the ", BowlEnd, " end")
+quantileValue <- .75
+quantile <- quantile(df$bSpeedPercent, quantileValue)
+BowlEnd <- "north"
+cleaned <- df[df$bSpeedPercent >= quantile,]
+cleaned <- cleaned[cleaned$bowlerEnd == BowlEnd,]
+callGRaph(cleaned, ball_Size, title_String, graph_Name)
+```
+
+https://plot.ly/~linus.austen.mcmanamey/438/slowest-speed-25-balls-bowled-from-the-north-end/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
